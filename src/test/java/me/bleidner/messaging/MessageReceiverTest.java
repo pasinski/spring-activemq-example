@@ -2,47 +2,46 @@ package me.bleidner.messaging;
 
 import me.bleidner.messaging.model.NotificationMessage;
 import me.bleidner.messaging.receiving.MessageProcessor;
+import me.bleidner.messaging.receiving.MessageReceiver;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.jms.annotation.EnableJms;
 import org.springframework.jms.core.JmsTemplate;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest
-@TestPropertySource(properties = "broker.queue.name=testQueue")
+@TestPropertySource(properties = "broker.queue.name=" + MessageReceiverTest.QUEUE_NAME)
 class MessageReceiverTest {
+
+    static final String QUEUE_NAME = "testQueue";
 
     @Autowired
     private JmsTemplate sender;
 
-    @Autowired
-    private TestMessageProcessor processor;
+    @MockBean
+    private MessageProcessor processor;
 
-    @TestConfiguration
-    static class Config {
-
-        @Bean
-        public MessageProcessor createMessageProcessor() {
-            return new TestMessageProcessor();
-        }
+    @Test
+    void shouldReceiveHaltausfallMessageAndForwardToRepairService() {
+        NotificationMessage message = new NotificationMessage("message content A");
+        sender.convertAndSend(QUEUE_NAME, message);
+        verify(processor,timeout(1000)).process(message);
     }
 
     @Test
-    void shouldReceiveHaltausfallMessageAndForwardToRepairService() throws InterruptedException {
-
-        String content = "message content";
-        NotificationMessage message = new NotificationMessage(content);
-
-        sender.convertAndSend("testQueue", message);
-
-        NotificationMessage haltausFallMessage = processor.waitForMessage();
-
-        assertThat(haltausFallMessage).isNotNull();
-        assertThat(haltausFallMessage.getContent()).isEqualTo(content);
+    void shouldProcessMessageAgainWhenFirstAttemptFailed() {
+        NotificationMessage message = new NotificationMessage("message content B");
+        doThrow(new RuntimeException()).doNothing().when(processor).process(message);
+        sender.convertAndSend(QUEUE_NAME, message);
+        verify(processor,timeout(2000).times(2)).process(message);
     }
 
 }
