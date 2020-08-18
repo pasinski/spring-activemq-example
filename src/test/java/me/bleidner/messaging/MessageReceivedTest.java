@@ -3,9 +3,10 @@ package me.bleidner.messaging;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jms.core.JmsTemplate;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 public class MessageReceivedTest {
@@ -13,8 +14,8 @@ public class MessageReceivedTest {
     @Autowired
     private JmsTemplate jmsTemplate;
 
-    @Autowired
-    private MessageReceiver messageReceiver;
+    @MockBean
+    private MessageProcessor messageProcessor;
 
 
     @Test
@@ -24,6 +25,6 @@ public class MessageReceivedTest {
 
         Thread.sleep(2000);
 
-        assertThat(messageReceiver.getMessage()).isEqualTo(message);
+        verify(messageProcessor).processMessage(message);
     }
 }
