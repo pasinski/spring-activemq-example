@@ -1,5 +1,6 @@
 package me.bleidner.messaging;
 
+import me.bleidner.messaging.model.NotificationMessage;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,7 +23,7 @@ public class MessageReceivedTest {
     @Test
     void shouldRecevieMessage() throws InterruptedException {
         String message = "my message";
-        jmsTemplate.convertAndSend("myQueue", message);
+        jmsTemplate.convertAndSend("myQueue", new NotificationMessage(message));
 
         verify(messageProcessor, timeout(2000)).processMessage(message);
     }
